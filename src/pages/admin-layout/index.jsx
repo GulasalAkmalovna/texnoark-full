@@ -21,7 +21,7 @@ const App = () => {
       <Layout>
          <Sider trigger={null} collapsible collapsed={collapsed}>
             <div className="text-white text-2xl font-bold text-center py-4 cursor-pointer">
-               Logo
+               Techno Ark
             </div>
             <Menu theme="dark" mode="inline" defaultSelectedKeys={[pathname]}>
                {admin.map((item) => (

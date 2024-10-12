@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Button, Col, Drawer, Form, Input, Row, Select } from "antd";
-import { products, category, brand, brandCategory, stock } from "@service";
+import { Button, Col, Drawer, Form, Input, Row, Select, message, Modal } from "antd";
+import { products, category, brand, stock } from "@service";
 const { Option } = Select;
 
 const App = (props) => {
@@ -9,10 +9,12 @@ const App = (props) => {
    const [categoryData, setCategoryData] = useState([]);
    const [brandData, setBrandData] = useState([]);
    const [productsData, setProductsData] = useState([]);
-   console.log(update);
+   const [loading, setLoading] = useState(false);
+   const [unsavedChanges, setUnsavedChanges] = useState(false);
+   const isEdit = !!update.id; // Check if we are editing
 
    useEffect(() => {
-      if (update.id) {
+      if (isEdit) {
          form.setFieldsValue({
             category_id: update.category_id?.id,
             brand_id: update.brand_id,
@@ -22,7 +24,8 @@ const App = (props) => {
       } else {
          form.resetFields();
       }
-   }, [update, form]);
+   }, [update, form, isEdit]);
+
    useEffect(() => {
       getCategory();
       getProduct();
@@ -39,6 +42,7 @@ const App = (props) => {
    };
 
    const handleSubmit = async (values) => {
+      setLoading(true); // Show loading
       const newdata = {
          category_id: parseInt(values.category_id),
          brand_id: parseInt(values.brand_id),
@@ -46,27 +50,32 @@ const App = (props) => {
          quantity: parseInt(values.quantity),
       };
       try {
-         if (update.id) {
-            const res = await stock.update(update.id, newdata);
-            if (res.status === 200) {
-               handleClose();
-               getData();
-            }
+         let res;
+         if (isEdit) {
+            res = await stock.update(update.id, newdata);
          } else {
-            const res = await stock.create(newdata);
-            if (res.status === 201) {
-               handleClose();
-               getData();
-            }
+            res = await stock.create(newdata);
+         }
+         if (res.status === 200 || res.status === 201) {
+            message.success(isEdit ? "Stock updated successfully" : "Stock added successfully");
+            handleClose();
+            getData();
+         } else {
+            message.error("Something went wrong, please try again.");
          }
       } catch (error) {
+         message.error("Failed to submit the form. Please check your data.");
          console.log(error);
+      } finally {
+         setLoading(false);
       }
    };
 
    const handleChange = async (value, inputName) => {
+      setUnsavedChanges(true);
       try {
          if (inputName === "category_id") {
+            form.setFieldsValue({ brand_id: null, product_id: null });
             const res = await brand.getCategory(value);
             setBrandData(res?.data?.data?.brands);
          }
@@ -76,28 +85,77 @@ const App = (props) => {
    };
 
    const handleClose = () => {
-      form.resetFields();
-      setOpen(false);
+      if (unsavedChanges) {
+         Modal.confirm({
+            title: 'Unsaved Changes',
+            content: 'You have unsaved changes. Are you sure you want to close?',
+            okText: 'Yes',
+            cancelText: 'No',
+            style: { fontWeight: 'bold' }, // Custom style for the modal
+            bodyStyle: { backgroundColor: '#f0f2f5' }, // Background color
+            onOk: () => {
+               setOpen(false);
+               setUnsavedChanges(false);
+               form.resetFields();
+            },
+         });
+      } else {
+         form.resetFields();
+         setOpen(false);
+      }
    };
+
    return (
       <>
-         <Drawer
-            width={520}
+         <Modal
+            width={window.innerWidth < 768 ? '100%' : 520}
             onClose={handleClose}
             open={open}
-            styles={{
-               body: {
-                  paddingBottom: 80,
-               },
+            title={isEdit ? "Edit Stock" : "Add New Stock"}
+            bodyStyle={{
+               padding: '20px 40px',
+               backgroundColor: '#f9f9f9',
             }}
+            footer={
+               <div
+                  style={{
+                     textAlign: 'right',
+                     padding: '10px 20px',
+                     backgroundColor: '#fafafa',
+                  }}
+               >
+                  <Button
+                     onClick={handleClose}
+                     style={{ marginRight: 8 }}
+                     disabled={loading}
+                     type="default"
+                  >
+                     Cancel
+                  </Button>
+                  <Button
+                     htmlType="submit"
+                     type="primary"
+                     onClick={() => form.submit()}
+                     loading={loading}
+                     disabled={loading}
+                     style={{ minWidth: '120px' }}
+                  >
+                     {isEdit ? "Update" : "Add"}
+                  </Button>
+               </div>
+            }
          >
-            <h1 className="text-2xl font-semibold mb-4">Add new stock</h1>
-            <Form form={form} layout="vertical" onFinish={handleSubmit}>
+            <Form
+               form={form}
+               layout="vertical"
+               onFinish={handleSubmit}
+               onValuesChange={() => setUnsavedChanges(true)}
+            >
                <Row gutter={16}>
                   <Col span={12}>
                      <Form.Item
                         name="category_id"
-                        label="Select category"
+                        label="Select Category"
                         rules={[
                            {
                               required: true,
@@ -108,9 +166,8 @@ const App = (props) => {
                         <Select
                            allowClear
                            showSearch
-                           onChange={(value) =>
-                              handleChange(value, "category_id")
-                           }
+                           onChange={(value) => handleChange(value, "category_id")}
+                           style={{ borderRadius: '8px', fontSize: '14px' }}
                         >
                            {categoryData?.map((item, index) => (
                               <Option value={item.id} key={index}>
@@ -123,7 +180,7 @@ const App = (props) => {
                   <Col span={12}>
                      <Form.Item
                         name="brand_id"
-                        label="Select brand"
+                        label="Select Brand"
                         rules={[
                            {
                               required: true,
@@ -136,6 +193,7 @@ const App = (props) => {
                            showSearch
                            onChange={(value) => handleChange(value, "brand_id")}
                            disabled={!form.getFieldValue("category_id")}
+                           style={{ borderRadius: '8px', fontSize: '14px' }}
                         >
                            {brandData?.map((item, index) => (
                               <Option value={item.id} key={index}>
@@ -154,16 +212,15 @@ const App = (props) => {
                         rules={[
                            {
                               required: true,
-                              message: "Please choose the brand category",
+                              message: "Please choose the product",
                            },
                         ]}
                      >
                         <Select
                            allowClear
                            showSearch
-                           onChange={(value) =>
-                              handleChange(value, "product_id")
-                           }
+                           onChange={(value) => handleChange(value, "product_id")}
+                           style={{ borderRadius: '8px', fontSize: '14px' }}
                         >
                            {productsData?.map((item, index) => (
                               <Option value={item.id} key={index}>
@@ -184,29 +241,17 @@ const App = (props) => {
                            },
                         ]}
                      >
-                        <Input type="number" />
-                     </Form.Item>
-                  </Col>
-               </Row>
-               <Row gutter={16}>
-                  <Col span={24}>
-                     <Form.Item>
-                        <Button
-                           htmlType="submit"
-                           type="primary"
-                           className="mt-10 py-4"
-                        >
-                           Add
-                        </Button>
-                        <Button className="ml-2" onClick={handleClose}>
-                           cancel
-                        </Button>
+                        <Input
+                           type="number"
+                           style={{ borderRadius: '8px', fontSize: '14px' }}
+                        />
                      </Form.Item>
                   </Col>
                </Row>
             </Form>
-         </Drawer>
+         </Modal>
       </>
    );
 };
+
 export default App;

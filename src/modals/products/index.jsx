@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Col, Drawer, Form, Input, Row, Select, Upload } from "antd";
+import { Button, Col, Modal, Form, Input, Row, Select, Upload } from "antd";
 import { UploadOutlined } from "@ant-design/icons";
 import { products, category, brand, brandCategory } from "@service";
 const { Option } = Select;
@@ -12,7 +12,7 @@ const App = (props) => {
    const [brandCategoryData, setBrandCategoryData] = useState([]);
 
    useEffect(() => {
-      if (update.id) {
+      if (update?.id) {
          form.setFieldsValue({
             name: update.name,
             price: update.price,
@@ -24,6 +24,7 @@ const App = (props) => {
          form.resetFields();
       }
    }, [update, form]);
+
    useEffect(() => {
       getCategory();
    }, []);
@@ -53,7 +54,7 @@ const App = (props) => {
       }
 
       try {
-         if (update.id) {
+         if (update?.id) {
             const res = await products.update(update.id, editData);
             if (res.status === 200) {
                handleClose();
@@ -84,23 +85,21 @@ const App = (props) => {
          console.log(error);
       }
    };
+
    const handleClose = () => {
       form.resetFields();
       setOpen(false);
    };
+
    return (
       <>
-         <Drawer
+         <Modal
+            title={update?.id ? "Update Product" : "Add Product"}
+            visible={open}
+            onCancel={handleClose}
             width={720}
-            onClose={handleClose}
-            open={open}
-            styles={{
-               body: {
-                  paddingBottom: 80,
-               },
-            }}
+            footer={null}
          >
-            <h1 className="text-2xl font-semibold mb-4">Add Product</h1>
             <Form form={form} layout="vertical" onFinish={handleSubmit}>
                <Row gutter={16}>
                   <Col span={12}>
@@ -124,7 +123,7 @@ const App = (props) => {
                         rules={[
                            {
                               required: true,
-                              message: "Please enter url",
+                              message: "Please enter product price",
                            },
                         ]}
                      >
@@ -214,7 +213,7 @@ const App = (props) => {
                      </Form.Item>
                   </Col>
                   <Col span={12}>
-                     {!update.id && (
+                     {!update?.id && (
                         <Form.Item
                            name="files"
                            label="Product image"
@@ -233,11 +232,8 @@ const App = (props) => {
                                  "https://www.mocky.io/v2/5cc8019d300000980a055e76"
                               }
                            >
-                              <Button
-                                 className="w-full"
-                                 icon={<UploadOutlined />}
-                              >
-                                 Upload Logo
+                              <Button className="w-full" icon={<UploadOutlined />}>
+                                 Upload Image
                               </Button>
                            </Upload>
                         </Form.Item>
@@ -252,17 +248,16 @@ const App = (props) => {
                            type="primary"
                            className="mt-10 py-4"
                         >
-                           Add
+                           {update?.id ? "Update" : "Add"}
                         </Button>
-                        <Button className="ml-2" onClick={handleClose}>
-                           cancel
-                        </Button>
+                        <Button className="ml-2" onClick={handleClose}>  Cancel</Button>
                      </Form.Item>
                   </Col>
                </Row>
             </Form>
-         </Drawer>
+         </Modal>
       </>
    );
 };
+
 export default App;

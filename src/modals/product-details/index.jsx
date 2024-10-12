@@ -1,12 +1,13 @@
 import React, { useEffect } from "react";
-import { Button, Input, Form, InputNumber, Drawer } from "antd";
+import { Button, Input, Form, InputNumber, Modal } from "antd";
 import { productDetails } from "@service";
 
 const App = (props) => {
    const [form] = Form.useForm();
    const { open, update, getData, id, setOpen } = props;
+
    useEffect(() => {
-      if (update.id) {
+      if (update?.id) {
          form.setFieldsValue({
             description: update.description,
             colors: update.colors?.join(","),
@@ -20,7 +21,7 @@ const App = (props) => {
 
    const handleSubmit = async (values) => {
       try {
-         if (update.id) {
+         if (update?.id) {
             const res = await productDetails.update(update.id, {
                ...values,
                product_id: parseInt(id),
@@ -48,16 +49,15 @@ const App = (props) => {
       setOpen(false);
       form.resetFields();
    };
-   console.log(update, "update");
 
    return (
       <div style={{ padding: 20 }}>
-         <Drawer
-            title="Add Product Details"
+         <Modal
+            title={update?.id ? "Update Product Details" : "Add Product Details"}
+            visible={open}
+            onCancel={handleClose}
+            footer={null}
             width={500}
-            placement="right"
-            onClose={handleClose}
-            open={open}
          >
             <Form form={form} layout="vertical" onFinish={handleSubmit}>
                <Form.Item
@@ -91,22 +91,23 @@ const App = (props) => {
                <Form.Item
                   name="discount"
                   label="Product Discount (%)"
-                  rules={[{ required: true, message: "Please enter discount" }]}
+                  rules={[
+                     { required: true, message: "Please enter discount" },
+                  ]}
                >
                   <InputNumber style={{ width: "100%" }} />
                </Form.Item>
 
                <Form.Item>
-                  <Button
-                     type="primary"
-                     htmlType="submit"
-                     className="bg-blue-500"
-                  >
-                     Submit
-                  </Button>
+                  <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                     <Button type="primary" htmlType="submit" className="bg-blue-500">
+                        {update?.id ? "Update" : "Submit"}
+                     </Button>
+                     <Button onClick={handleClose}>Cancel</Button>
+                  </div>
                </Form.Item>
             </Form>
-         </Drawer>
+         </Modal>
       </div>
    );
 };
